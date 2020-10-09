@@ -1,0 +1,22 @@
+{
+  "hoursLog": 24,
+  "searchScheduleDays": 7,
+  "minPrevSchedule": 30,
+  "minPostSchedule": 15,
+  "siieConnection": {
+    "userDb": "root",
+    "pswdDb": "msroot",
+    "hostDb": "localhost",
+    "nameDb": "erp"
+  },
+  "capConnection": {
+    "userDb": "root",
+    "pswdDb": "msroot",
+    "hostDb": "localhost",
+    "nameDb": "checador"
+  },
+  "companyData": {
+    "companyName": "Aceites Especiales TH",
+    "companyImage": "img/aeth.jpg"
+  }
+}
