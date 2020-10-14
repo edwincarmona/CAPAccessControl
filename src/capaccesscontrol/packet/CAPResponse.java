@@ -11,7 +11,7 @@ import java.util.List;
  *
  * @author Edwin Carmona
  */
-public class CAPReponse {
+public class CAPResponse {
     protected CAPEmployeeResponse employee;
     protected List<CAPAbsenceResponse> absences;
     protected List<CAPEventResponse> events;

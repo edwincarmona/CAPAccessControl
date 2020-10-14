@@ -9,7 +9,7 @@ package capaccesscontrol.packet;
  *
  * @author Edwin Carmona
  */
-class CAPEmployeeResponse {
+public class CAPEmployeeResponse {
     protected String name;
     protected String num_employee;
     protected int external_id;

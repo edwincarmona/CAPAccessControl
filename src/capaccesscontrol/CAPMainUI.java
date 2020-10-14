@@ -6,35 +6,32 @@
 package capaccesscontrol;
 
 import capaccesscontrol.config.CAPConfig;
-import capaccesscontrol.packet.CAPReponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import capaccesscontrol.core.CAPCore;
+import capaccesscontrol.db.CAPMySql;
+import capaccesscontrol.db.CAPSiieDb;
+import capaccesscontrol.packet.CAPEventResponse;
+import capaccesscontrol.packet.CAPRequest;
+import capaccesscontrol.packet.CAPResponse;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
-import java.text.DateFormat;
+import java.awt.event.KeyEvent;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
 
 /**
  *
  * @author Edwin Carmona
  */
-public class CAPMainUI extends javax.swing.JFrame {
+public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     
     private final CAPConfig oConfig;
+    private CAPMySql oSiieMySql;
+    private CAPMySql oCapMySql;
+    private Date tDate;
 
     /**
      * Creates new form CAPMainUI
@@ -43,12 +40,43 @@ public class CAPMainUI extends javax.swing.JFrame {
     public CAPMainUI(CAPConfig config) {
         oConfig = config;
         initComponents();
+        initCustom();
+    }
+    
+    private void initCustom() {
         startClock();
         setImage();
-        getData();
+        
+        oSiieMySql = new CAPMySql(oConfig.getSiieConnection().getNameDb(), 
+                                oConfig.getSiieConnection().getHostDb(),
+                                oConfig.getSiieConnection().getPortDb(), 
+                                oConfig.getSiieConnection().getUserDb(), 
+                                oConfig.getSiieConnection().getPswdDb());
+        
+        oCapMySql = new CAPMySql(oConfig.getCapConnection().getNameDb(), 
+                                oConfig.getCapConnection().getHostDb(),
+                                oConfig.getCapConnection().getPortDb(), 
+                                oConfig.getCapConnection().getUserDb(), 
+                                oConfig.getCapConnection().getPswdDb());
+        
+        resetFields();
+        jbSearch.addActionListener(this);
+    }
+    
+    private void resetFields() {
+        jtfNumEmployee.setText("");
+        jtfNumEmp.setText("");
+        jtfNameEmp.setText("");
+        jlReason.setText("");
+        jlImgPhoto.setText("");
+    }
+    
+    private void setImage() {
+        jLImage.setIcon(new javax.swing.ImageIcon(oConfig.getCompanyData().getCompanyImage()));
+        jLImage.setPreferredSize(new java.awt.Dimension(75, 75));
     }
 
-    public void startClock() {
+    private void startClock() {
         SimpleDateFormat format1 = new SimpleDateFormat("dd-MM-yyy HH:mm:ss");
         
         javax.swing.Timer t = new javax.swing.Timer(1000,
@@ -68,48 +96,174 @@ public class CAPMainUI extends javax.swing.JFrame {
         t.start();
     }
     
-    public void setImage() {
-        jLImage.setIcon(new javax.swing.ImageIcon(oConfig.getCompanyData().getCompanyImage())); // NOI18N
-        jLImage.setPreferredSize(new java.awt.Dimension(300, 23));
+    private void actionSearchByEmployeeNum() {
+        String numEmp = jtfNumEmployee.getText();
+        
+        if (numEmp.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Debe introducir un número de empleado", "Eror", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (! this.isStringInt(numEmp)) {
+            return;
+        }
+        
+        tDate = new Date();
+        
+        CAPResponse response = CAPRequest.requestByNumEmployee(tDate, numEmp, oConfig.getSearchScheduleDays(), oConfig.getUrlNumEmployee());
+        
+        resetFields();
+        
+        if (! validateResponse(response)) {
+            return;
+        }
+        
+        showPhoto(response);
+        this.showData(response);
+        
+        if (! validateAccess(response)) {
+            return;
+        }
+        
+        this.showAutorized(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch());
     }
     
-    public void getData() {
-        try {
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-            DateFormat tf = new SimpleDateFormat("HH:mm");
+    private boolean isStringInt(String s)
+    {
+        try
+        {
+            Integer.parseInt(s);
             
-            String charset = java.nio.charset.StandardCharsets.UTF_8.name();
-            String sDate = df.format(new Date());
-            String sTime = tf.format(new Date());
-            
-            String query = String.format("dt_date=%s&dt_time=%s&num_emp=%s&next_days=%s",
-                    URLEncoder.encode(sDate, charset),
-                    URLEncoder.encode(sTime, charset),
-                    URLEncoder.encode("990", charset),
-                    URLEncoder.encode("7", charset)
-            );
-            
-            String sURL = "http://localhost:9090/cap/public/api/infobynum";
-            
-            URLConnection connection = new URL(sURL + "?" + query).openConnection();
-            connection.setRequestProperty("Accept-Charset", charset);
-            connection.setRequestProperty("Content-Type", "application/json");
-            InputStream response = connection.getInputStream();
-            
-            try (Scanner scanner = new Scanner(response)) {
-                String responseBody = scanner.useDelimiter("\\A").next();
-                System.out.println(responseBody);
-                
-                ObjectMapper mapper = new ObjectMapper();
-                CAPReponse capResponse = mapper.readValue(responseBody, CAPReponse.class);
-                System.out.println(capResponse);
+            return true;
+        }
+        catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+    
+    private void showPhoto(CAPResponse response) {
+        javax.swing.ImageIcon photoIcon = CAPSiieDb.getPhoto(oSiieMySql.connectMySQL(), response.getEmployee().getExternal_id());
+        jlImgPhoto.setIcon(photoIcon);
+    }
+    
+    private void showData(CAPResponse response) {
+        jtfNumEmp.setText(response.getEmployee().getNum_employee());
+        jtfNameEmp.setText(response.getEmployee().getName());
+    }
+    
+    private boolean validateResponse(CAPResponse response) {
+        if (response.getEmployee() == null) {
+            showUnauthorized("No se encontró al empleado en el sistema", "", "", false);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean validateAccess(CAPResponse response) {
+        if (! response.getEmployee().isIs_active() || response.getEmployee().isIs_delete()) {
+            showUnauthorized("El empleado está desactivado en el sistema", "", "", false);
+            return false;
+        }
+        
+        String sIn = "";
+        String sOut = "";
+        
+        if (response.getEvents() != null && response.getEvents().size() > 0) {
+            String reason = "";
+            for (CAPEventResponse event :  response.getEvents()) {
+                reason = reason.isEmpty() ? event.getTypeName() : (reason + ", " + event.getTypeName());
             }
-        }   catch (UnsupportedEncodingException ex) {
-            Logger.getLogger(CAPMainUI.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(CAPMainUI.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(CAPMainUI.class.getName()).log(Level.SEVERE, null, ex);
+            
+            if (response.getNextSchedule() != null) {
+                sIn = response.getNextSchedule().getInDateTimeSch();
+                sOut = response.getNextSchedule().getOutDateTimeSch();
+            }
+            
+            showUnauthorized("El empleado tiene programado: " + reason + " para el día de hoy", sIn, sOut, true);
+            
+            return false;
+        }
+        
+        if (response.getSchedule() != null) {
+            if (! CAPCore.isOnShift(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch(), tDate, oConfig.getMinPrevSchedule(), oConfig.getMinPostSchedule())) {
+                sIn = response.getSchedule().getInDateTimeSch();
+                sOut = response.getSchedule().getOutDateTimeSch();
+            
+                showUnauthorized("El empleado está fuera de su horario", sIn, sOut, false);
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+        else {
+            if (response.getNextSchedule() != null) {
+                sIn = response.getNextSchedule().getInDateTimeSch();
+                sOut = response.getNextSchedule().getOutDateTimeSch();
+            }
+
+            showUnauthorized("El empleado no tiene horario asignado para el día de hoy", sIn, sOut, true);
+            
+            return false;
+        }
+    }
+    
+    private void showUnauthorized(String reason, String scheduleIn, String scheduleOut, boolean isNext) {
+        String text = "<html>"
+                        + "<body style='text-align: center; background-color: red;'>"
+                            + "<div style='height: 200px; width: 180px; top: 50%;'><br><br>ACCESO<br>DENEGADO</div>"
+                        + "</body>"
+                    + "</html>";
+        
+        jlResultMessage.setText(text);
+        jlResultMessage.setFont(new Font("Verdana", Font.PLAIN, 32));
+        
+        String textReason = "<html>"
+                        + "<body style='text-align: center;'>"
+                            + "<div style='height: 100%; width: 100%;'><p>" + reason + "</p></div>"
+                        + "</body>"
+                    + "</html>";
+        
+        jlReason.setText(textReason);
+        jlReason.setFont(new Font("Verdana", Font.PLAIN, 14));
+        
+        if (! isNext) {
+            jlIn.setText("Horario entrada");
+            jlOut.setText("Horario salida");
+        }
+        else {
+            jlIn.setText("Próximo horario entrada");
+            jlOut.setText("Próximo horario salida");
+        }
+        
+        jtfScheduleIn.setText(scheduleIn);
+        jtfScheduleOut.setText(scheduleOut);
+    }
+    
+    private void showAutorized(String scheduleIn, String scheduleOut) {
+        String text = "<html>"
+                        + "<body style='text-align: center; background-color: green;'>"
+                            + "<div style='height: 200px; width: 180px; top: 50%;'><br><br>ACCESO<br>AUTORIZADO</div>"
+                        + "</body>"
+                    + "</html>";
+        
+        jlResultMessage.setText(text);
+        jlResultMessage.setFont(new Font("Verdana", Font.PLAIN, 32));
+        
+        jlIn.setText("Horario entrada");
+        jlOut.setText("Horario salida");
+        
+        jtfScheduleIn.setText(scheduleIn);
+        jtfScheduleOut.setText(scheduleOut);
+    }
+    
+    public void actionPerformed(ActionEvent evt) {
+        if (evt.getSource() instanceof JButton) {
+            JButton button = (JButton) evt.getSource();
+
+            if (button == jbSearch) {
+                actionSearchByEmployeeNum();
+            }
         }
     }
 
@@ -132,11 +286,50 @@ public class CAPMainUI extends javax.swing.JFrame {
         jPanel9 = new javax.swing.JPanel();
         jTextField1 = new javax.swing.JTextField();
         jPanel10 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
         jPanel11 = new javax.swing.JPanel();
+        jLabel5 = new javax.swing.JLabel();
+        jtfNumEmployee = new javax.swing.JTextField();
         jPanel12 = new javax.swing.JPanel();
+        jLabel6 = new javax.swing.JLabel();
+        jbSearch = new javax.swing.JButton();
         jPanel13 = new javax.swing.JPanel();
+        jLabel7 = new javax.swing.JLabel();
+        jButton2 = new javax.swing.JButton();
         jPanel6 = new javax.swing.JPanel();
+        jPanel25 = new javax.swing.JPanel();
+        jLabel8 = new javax.swing.JLabel();
+        jPanel26 = new javax.swing.JPanel();
+        jLabel9 = new javax.swing.JLabel();
+        jTextField3 = new javax.swing.JTextField();
+        jPanel28 = new javax.swing.JPanel();
+        jButton3 = new javax.swing.JButton();
+        jPanel27 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jList1 = new javax.swing.JList<>();
+        jPanel29 = new javax.swing.JPanel();
+        jButton4 = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
+        jPanel14 = new javax.swing.JPanel();
+        jPanel15 = new javax.swing.JPanel();
+        jlImgPhoto = new javax.swing.JLabel();
+        jPanel18 = new javax.swing.JPanel();
+        jtfNumEmp = new javax.swing.JTextField();
+        jPanel19 = new javax.swing.JPanel();
+        jtfNameEmp = new javax.swing.JTextField();
+        jPanel16 = new javax.swing.JPanel();
+        jlResultMessage = new javax.swing.JLabel();
+        jPanel17 = new javax.swing.JPanel();
+        jPanel20 = new javax.swing.JPanel();
+        jlReason = new javax.swing.JLabel();
+        jPanel23 = new javax.swing.JPanel();
+        jlIn = new javax.swing.JLabel();
+        jPanel21 = new javax.swing.JPanel();
+        jtfScheduleIn = new javax.swing.JTextField();
+        jPanel22 = new javax.swing.JPanel();
+        jlOut = new javax.swing.JLabel();
+        jPanel24 = new javax.swing.JPanel();
+        jtfScheduleOut = new javax.swing.JTextField();
         jPanel3 = new javax.swing.JPanel();
 
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -147,31 +340,102 @@ public class CAPMainUI extends javax.swing.JFrame {
 
         jPanel4.setLayout(new java.awt.GridLayout(1, 2));
 
-        jPanel5.setLayout(new java.awt.GridLayout(7, 1));
-
         jLabel1.setText("CAP Access Control");
         jPanel7.add(jLabel1);
 
         jPanel5.add(jPanel7);
 
-        jLImage.setPreferredSize(new java.awt.Dimension(300, 23));
+        jLImage.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLImage.setText("Foto");
+        jLImage.setToolTipText("Foto (tamaño sugerido: 100×100 px)");
+        jLImage.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        jLImage.setPreferredSize(new java.awt.Dimension(75, 75));
         jPanel8.add(jLImage);
 
         jPanel5.add(jPanel8);
 
+        jTextField1.setEditable(false);
         jTextField1.setText("jTextField1");
         jTextField1.setPreferredSize(new java.awt.Dimension(300, 23));
         jPanel9.add(jTextField1);
 
         jPanel5.add(jPanel9);
+
+        jLabel2.setText("Consulte Empleado");
+        jPanel10.add(jLabel2);
+
         jPanel5.add(jPanel10);
+
+        jLabel5.setText("Num. Empleado:");
+        jLabel5.setPreferredSize(new java.awt.Dimension(125, 23));
+        jPanel11.add(jLabel5);
+
+        jtfNumEmployee.setPreferredSize(new java.awt.Dimension(175, 23));
+        jtfNumEmployee.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                onKeyPressedNumEmp(evt);
+            }
+        });
+        jPanel11.add(jtfNumEmployee);
+
         jPanel5.add(jPanel11);
+
+        jLabel6.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel12.add(jLabel6);
+
+        jbSearch.setText("Buscar");
+        jPanel12.add(jbSearch);
+
         jPanel5.add(jPanel12);
+
+        jLabel7.setPreferredSize(new java.awt.Dimension(130, 23));
+        jPanel13.add(jLabel7);
+
+        jButton2.setText("Búsqueda por nombre");
+        jPanel13.add(jButton2);
+
         jPanel5.add(jPanel13);
 
         jPanel4.add(jPanel5);
 
-        jPanel6.setLayout(new java.awt.BorderLayout());
+        jLabel8.setText("Búsqueda de Empleado");
+        jLabel8.setPreferredSize(new java.awt.Dimension(150, 23));
+        jPanel25.add(jLabel8);
+
+        jPanel6.add(jPanel25);
+
+        jLabel9.setText("Nombre Empleado:");
+        jLabel9.setPreferredSize(new java.awt.Dimension(100, 23));
+        jPanel26.add(jLabel9);
+
+        jTextField3.setPreferredSize(new java.awt.Dimension(225, 23));
+        jPanel26.add(jTextField3);
+
+        jPanel6.add(jPanel26);
+
+        jButton3.setText("jButton3");
+        jPanel28.add(jButton3);
+
+        jPanel6.add(jPanel28);
+
+        jScrollPane1.setPreferredSize(new java.awt.Dimension(300, 105));
+
+        jList1.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane1.setViewportView(jList1);
+
+        jPanel27.add(jScrollPane1);
+
+        jPanel6.add(jPanel27);
+
+        jButton4.setText("jButton3");
+        jPanel29.add(jButton4);
+
+        jPanel6.add(jPanel29);
+
         jPanel4.add(jPanel6);
 
         jPanel1.add(jPanel4, java.awt.BorderLayout.CENTER);
@@ -181,6 +445,73 @@ public class CAPMainUI extends javax.swing.JFrame {
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Resultado"));
         jPanel2.setPreferredSize(new java.awt.Dimension(700, 300));
         jPanel2.setLayout(new java.awt.BorderLayout());
+
+        jPanel14.setLayout(new java.awt.GridLayout(1, 3, 5, 0));
+
+        jlImgPhoto.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jlImgPhoto.setText("Foto");
+        jlImgPhoto.setToolTipText("Foto (tamaño sugerido: 100×100 px)");
+        jlImgPhoto.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        jlImgPhoto.setPreferredSize(new java.awt.Dimension(100, 100));
+        jPanel15.add(jlImgPhoto);
+
+        jtfNumEmp.setEditable(false);
+        jtfNumEmp.setText("jTextField2");
+        jtfNumEmp.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel18.add(jtfNumEmp);
+
+        jPanel15.add(jPanel18);
+
+        jtfNameEmp.setEditable(false);
+        jtfNameEmp.setText("jTextField4");
+        jtfNameEmp.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel19.add(jtfNameEmp);
+
+        jPanel15.add(jPanel19);
+
+        jPanel14.add(jPanel15);
+
+        jPanel16.setLayout(new java.awt.BorderLayout());
+
+        jlResultMessage.setText("RESULTADO");
+        jPanel16.add(jlResultMessage, java.awt.BorderLayout.CENTER);
+
+        jPanel14.add(jPanel16);
+
+        jlReason.setText("jLabel2");
+        jlReason.setPreferredSize(new java.awt.Dimension(200, 92));
+        jPanel20.add(jlReason);
+
+        jPanel17.add(jPanel20);
+
+        jlIn.setText("Entrada");
+        jlIn.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel23.add(jlIn);
+
+        jPanel17.add(jPanel23);
+
+        jtfScheduleIn.setEditable(false);
+        jtfScheduleIn.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel21.add(jtfScheduleIn);
+
+        jPanel17.add(jPanel21);
+
+        jlOut.setText("Salida");
+        jlOut.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel22.add(jlOut);
+
+        jPanel17.add(jPanel22);
+
+        jtfScheduleOut.setEditable(false);
+        jtfScheduleOut.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel24.add(jtfScheduleOut);
+
+        jPanel17.add(jPanel24);
+
+        jPanel14.add(jPanel17);
+
+        jPanel2.add(jPanel14, java.awt.BorderLayout.CENTER);
+
         getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 306, -1, 283));
 
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder("Bitácora de consulta"));
@@ -188,16 +519,48 @@ public class CAPMainUI extends javax.swing.JFrame {
         getContentPane().add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 0, 240, 589));
     }// </editor-fold>//GEN-END:initComponents
 
+    private void onKeyPressedNumEmp(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_onKeyPressedNumEmp
+        if(evt.getKeyCode() == KeyEvent.VK_ENTER) {
+            this.actionSearchByEmployeeNum();
+        }
+    }//GEN-LAST:event_onKeyPressedNumEmp
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton3;
+    private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLImage;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JList<String> jList1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel10;
     private javax.swing.JPanel jPanel11;
     private javax.swing.JPanel jPanel12;
     private javax.swing.JPanel jPanel13;
+    private javax.swing.JPanel jPanel14;
+    private javax.swing.JPanel jPanel15;
+    private javax.swing.JPanel jPanel16;
+    private javax.swing.JPanel jPanel17;
+    private javax.swing.JPanel jPanel18;
+    private javax.swing.JPanel jPanel19;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel20;
+    private javax.swing.JPanel jPanel21;
+    private javax.swing.JPanel jPanel22;
+    private javax.swing.JPanel jPanel23;
+    private javax.swing.JPanel jPanel24;
+    private javax.swing.JPanel jPanel25;
+    private javax.swing.JPanel jPanel26;
+    private javax.swing.JPanel jPanel27;
+    private javax.swing.JPanel jPanel28;
+    private javax.swing.JPanel jPanel29;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
@@ -205,6 +568,19 @@ public class CAPMainUI extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel7;
     private javax.swing.JPanel jPanel8;
     private javax.swing.JPanel jPanel9;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jTextField3;
+    private javax.swing.JButton jbSearch;
+    private javax.swing.JLabel jlImgPhoto;
+    private javax.swing.JLabel jlIn;
+    private javax.swing.JLabel jlOut;
+    private javax.swing.JLabel jlReason;
+    private javax.swing.JLabel jlResultMessage;
+    private javax.swing.JTextField jtfNameEmp;
+    private javax.swing.JTextField jtfNumEmp;
+    private javax.swing.JTextField jtfNumEmployee;
+    private javax.swing.JTextField jtfScheduleIn;
+    private javax.swing.JTextField jtfScheduleOut;
     // End of variables declaration//GEN-END:variables
 }

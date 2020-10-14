@@ -9,7 +9,7 @@ package capaccesscontrol.packet;
  *
  * @author Edwin Carmona
  */
-class CAPEventResponse {
+public class CAPEventResponse {
     protected String dtDate;
     protected int typeId;
     protected String typeName;

@@ -9,7 +9,7 @@ package capaccesscontrol.packet;
  *
  * @author Edwin Carmona
  */
-class CAPSchedule {
+public class CAPSchedule {
     protected String inDateTimeSch;
     protected String outDateTimeSch;
     protected String isSpecialSchedule;

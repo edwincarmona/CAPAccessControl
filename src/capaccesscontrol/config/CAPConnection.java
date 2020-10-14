@@ -13,6 +13,7 @@ public class CAPConnection {
     protected String userDb;
     protected String pswdDb;
     protected String hostDb;
+    protected String portDb;
     protected String nameDb;
 
     public String getUserDb() {
@@ -46,6 +47,13 @@ public class CAPConnection {
     public void setNameDb(String nameDb) {
         this.nameDb = nameDb;
     }
-    
+
+    public String getPortDb() {
+        return portDb;
+    }
+
+    public void setPortDb(String portDb) {
+        this.portDb = portDb;
+    }
     
 }

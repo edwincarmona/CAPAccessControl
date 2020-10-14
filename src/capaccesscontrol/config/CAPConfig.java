@@ -14,6 +14,8 @@ public class CAPConfig {
     protected int searchScheduleDays;
     protected int minPrevSchedule;
     protected int minPostSchedule;
+    protected String urlNumEmployee;
+    protected String urlIdEmployee;
     protected CAPConnection siieConnection;
     protected CAPConnection capConnection;
     protected CAPCompanyData companyData;
@@ -48,6 +50,22 @@ public class CAPConfig {
 
     public void setMinPostSchedule(int minPostSchedule) {
         this.minPostSchedule = minPostSchedule;
+    }
+
+    public String getUrlNumEmployee() {
+        return urlNumEmployee;
+    }
+
+    public void setUrlNumEmployee(String urlNumEmployee) {
+        this.urlNumEmployee = urlNumEmployee;
+    }
+
+    public String getUrlIdEmployee() {
+        return urlIdEmployee;
+    }
+
+    public void setUrlIdEmployee(String urlIdEmployee) {
+        this.urlIdEmployee = urlIdEmployee;
     }
 
     public CAPConnection getSiieConnection() {

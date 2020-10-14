@@ -9,7 +9,7 @@ package capaccesscontrol.packet;
  *
  * @author Edwin Carmona
  */
-class CAPAbsenceResponse {
+public class CAPAbsenceResponse {
     protected String external_key;
     protected String nts;
     protected String type_name;
