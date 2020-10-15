@@ -5,6 +5,7 @@
   "minPostSchedule": 15,
   "urlNumEmployee" : "http://localhost:9090/cap/public/api/infobynum",
   "urlIdEmployee" : "http://localhost:9090/cap/public/api/infobyid",
+  "urlGetEmployees" : "http://localhost:9090/cap/public/api/employees",
   "siieConnection": {
     "userDb": "root",
     "pswdDb": "msroot",

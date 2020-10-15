@@ -10,11 +10,20 @@ package capaccesscontrol.packet;
  * @author Edwin Carmona
  */
 public class CAPEmployeeResponse {
+    protected int id;
     protected String name;
     protected String num_employee;
     protected int external_id;
     protected boolean is_active; 
     protected boolean is_delete;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;

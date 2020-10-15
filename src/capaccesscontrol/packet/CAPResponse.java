@@ -13,6 +13,7 @@ import java.util.List;
  */
 public class CAPResponse {
     protected CAPEmployeeResponse employee;
+    protected List<CAPEmployeeResponse> employees;
     protected List<CAPAbsenceResponse> absences;
     protected List<CAPEventResponse> events;
     protected CAPSchedule schedule;
@@ -24,6 +25,14 @@ public class CAPResponse {
 
     public void setEmployee(CAPEmployeeResponse employee) {
         this.employee = employee;
+    }
+
+    public List<CAPEmployeeResponse> getEmployees() {
+        return employees;
+    }
+
+    public void setEmployees(List<CAPEmployeeResponse> employees) {
+        this.employees = employees;
     }
 
     public List<CAPAbsenceResponse> getAbsences() {

@@ -5,6 +5,7 @@
  */
 package capaccesscontrol;
 
+import capaccesscontrol.ui.CAPMainUI;
 import capaccesscontrol.config.CAPConfig;
 import capaccesscontrol.config.CAPConfigReader;
 import javax.swing.JFrame;

@@ -16,6 +16,7 @@ public class CAPConfig {
     protected int minPostSchedule;
     protected String urlNumEmployee;
     protected String urlIdEmployee;
+    protected String urlGetEmployees;
     protected CAPConnection siieConnection;
     protected CAPConnection capConnection;
     protected CAPCompanyData companyData;
@@ -66,6 +67,14 @@ public class CAPConfig {
 
     public void setUrlIdEmployee(String urlIdEmployee) {
         this.urlIdEmployee = urlIdEmployee;
+    }
+
+    public String getUrlGetEmployees() {
+        return urlGetEmployees;
+    }
+
+    public void setUrlGetEmployees(String urlGetEmployees) {
+        this.urlGetEmployees = urlGetEmployees;
     }
 
     public CAPConnection getSiieConnection() {

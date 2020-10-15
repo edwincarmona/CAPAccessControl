@@ -5,7 +5,7 @@
  */
 package capaccesscontrol.packet;
 
-import capaccesscontrol.CAPMainUI;
+import capaccesscontrol.ui.CAPMainUI;
 import capaccesscontrol.db.CAPSiieDb;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -27,6 +27,14 @@ import java.util.logging.Logger;
  * @author Edwin Carmona
  */
 public class CAPRequest {
+    
+    public static CAPResponse requestEmployees(String url) {
+        CAPResponse response;
+        
+        response = CAPRequest.request(url, "");
+        
+        return response;
+    }
     
     public static CAPResponse requestByIdEmployee(Date dtDate, int idEmployee, int nextDays, String url) {
         CAPResponse response = null;

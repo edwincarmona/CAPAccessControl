@@ -3,12 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package capaccesscontrol;
+package capaccesscontrol.ui;
 
 import capaccesscontrol.config.CAPConfig;
 import capaccesscontrol.core.CAPCore;
 import capaccesscontrol.db.CAPMySql;
 import capaccesscontrol.db.CAPSiieDb;
+import capaccesscontrol.packet.CAPEmployeeResponse;
 import capaccesscontrol.packet.CAPEventResponse;
 import capaccesscontrol.packet.CAPRequest;
 import capaccesscontrol.packet.CAPResponse;
@@ -16,10 +17,16 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 
 /**
@@ -32,6 +39,8 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private CAPMySql oSiieMySql;
     private CAPMySql oCapMySql;
     private Date tDate;
+    private List<CAPEmployeeResponse> lEmployees;
+    private CAPEmployeeUI oEmployeeUI;
 
     /**
      * Creates new form CAPMainUI
@@ -61,6 +70,26 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         
         resetFields();
         jbSearch.addActionListener(this);
+        jbSearchByEmployee.addActionListener(this);
+        jbSearchSelectedEmployee.addActionListener(this);
+        
+        jlistSearchEmployees.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent evt) {
+                JList list = (JList)evt.getSource();
+                if (evt.getClickCount() == 2) {
+
+                    // Double-click detected
+                    int index = list.locationToIndex(evt.getPoint());
+                    if (index > -1) {
+                        oEmployeeUI = (CAPEmployeeUI) list.getModel().getElementAt(index);
+                        actionSearchEmployee();
+                    }
+                }
+            }
+        });
+        
+        disableSearchByEmployee();
     }
     
     private void resetFields() {
@@ -69,6 +98,20 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfNameEmp.setText("");
         jlReason.setText("");
         jlImgPhoto.setText("");
+    }
+    
+    private void disableSearchByEmployee() {
+        jtfSearchEmployee.setEditable(false);
+        jlistSearchEmployees.setEnabled(false);
+        jbSearchSelectedEmployee.setEnabled(false);
+        
+        jtfNumEmployee.requestFocusInWindow();
+    }
+    
+    private void enableSearchByEmployee() {
+        jtfSearchEmployee.setEditable(true);
+        jlistSearchEmployees.setEnabled(true);
+        jbSearchSelectedEmployee.setEnabled(true);
     }
     
     private void setImage() {
@@ -111,6 +154,38 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         
         CAPResponse response = CAPRequest.requestByNumEmployee(tDate, numEmp, oConfig.getSearchScheduleDays(), oConfig.getUrlNumEmployee());
         
+        this.processCAPResponse(response);
+    }
+    
+    private void actionSearchByEmployee() {
+        CAPResponse response = CAPRequest.requestEmployees(oConfig.getUrlGetEmployees());
+        
+        if (response.getEmployees() == null) {
+            return;
+        }
+        
+        enableSearchByEmployee();
+        
+        lEmployees = response.getEmployees();
+    }
+    
+    private void actionSearchSelectedEmployee() {
+        oEmployeeUI = jlistSearchEmployees.getSelectedValue();
+        actionSearchEmployee();
+    }
+    
+    private void actionSearchEmployee() {
+        tDate = new Date();
+        CAPResponse response = CAPRequest.requestByIdEmployee(tDate, oEmployeeUI.getIdEmployee(), oConfig.getSearchScheduleDays(), oConfig.getUrlIdEmployee());
+        this.processCAPResponse(response);
+        
+        DefaultListModel model = new DefaultListModel();
+        jlistSearchEmployees.setModel(model);
+        jtfSearchEmployee.setText("");
+        disableSearchByEmployee();
+    }
+    
+    private void processCAPResponse(CAPResponse response) {
         resetFields();
         
         if (! validateResponse(response)) {
@@ -125,6 +200,28 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
         
         this.showAutorized(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch());
+    }
+    
+    private void showEmployeesResult() {
+        String empText = jtfSearchEmployee.getText();
+        CAPEmployeeUI empUi;
+        DefaultListModel model = new DefaultListModel();
+        
+        List<CAPEmployeeResponse> result = lEmployees.stream()
+                .filter(item -> (item.getName().toLowerCase()).contains(empText.toLowerCase()))
+                .collect(Collectors.toList());
+        
+        if (result.isEmpty()) {
+            jlistSearchEmployees.setModel(model);
+            return;
+        }
+        
+        for (CAPEmployeeResponse employeeResponse : result) {
+            empUi = new CAPEmployeeUI(employeeResponse.getId(), employeeResponse.getName(), employeeResponse.getNum_employee(), employeeResponse.getExternal_id());
+            model.addElement(empUi);
+        }
+        
+        jlistSearchEmployees.setModel(model);
     }
     
     private boolean isStringInt(String s)
@@ -257,12 +354,19 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfScheduleOut.setText(scheduleOut);
     }
     
+    @Override
     public void actionPerformed(ActionEvent evt) {
         if (evt.getSource() instanceof JButton) {
             JButton button = (JButton) evt.getSource();
 
             if (button == jbSearch) {
                 actionSearchByEmployeeNum();
+            }
+            else if (button == jbSearchByEmployee) {
+                actionSearchByEmployee();
+            }
+            else if (button == jbSearchSelectedEmployee) {
+                actionSearchSelectedEmployee();
             }
         }
     }
@@ -295,20 +399,18 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jbSearch = new javax.swing.JButton();
         jPanel13 = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
-        jButton2 = new javax.swing.JButton();
+        jbSearchByEmployee = new javax.swing.JButton();
         jPanel6 = new javax.swing.JPanel();
         jPanel25 = new javax.swing.JPanel();
         jLabel8 = new javax.swing.JLabel();
         jPanel26 = new javax.swing.JPanel();
         jLabel9 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
-        jPanel28 = new javax.swing.JPanel();
-        jButton3 = new javax.swing.JButton();
+        jtfSearchEmployee = new javax.swing.JTextField();
         jPanel27 = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jList1 = new javax.swing.JList<>();
+        jScrollPane = new javax.swing.JScrollPane();
+        jlistSearchEmployees = new javax.swing.JList<>();
         jPanel29 = new javax.swing.JPanel();
-        jButton4 = new javax.swing.JButton();
+        jbSearchSelectedEmployee = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jPanel14 = new javax.swing.JPanel();
         jPanel15 = new javax.swing.JPanel();
@@ -391,8 +493,8 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jLabel7.setPreferredSize(new java.awt.Dimension(130, 23));
         jPanel13.add(jLabel7);
 
-        jButton2.setText("Búsqueda por nombre");
-        jPanel13.add(jButton2);
+        jbSearchByEmployee.setText("Búsqueda por nombre");
+        jPanel13.add(jbSearchByEmployee);
 
         jPanel5.add(jPanel13);
 
@@ -404,35 +506,30 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
 
         jPanel6.add(jPanel25);
 
-        jLabel9.setText("Nombre Empleado:");
-        jLabel9.setPreferredSize(new java.awt.Dimension(100, 23));
+        jLabel9.setText("Nombre:");
+        jLabel9.setPreferredSize(new java.awt.Dimension(75, 23));
         jPanel26.add(jLabel9);
 
-        jTextField3.setPreferredSize(new java.awt.Dimension(225, 23));
-        jPanel26.add(jTextField3);
+        jtfSearchEmployee.setPreferredSize(new java.awt.Dimension(225, 23));
+        jtfSearchEmployee.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                jtfSearchEmployeeKeyReleased(evt);
+            }
+        });
+        jPanel26.add(jtfSearchEmployee);
 
         jPanel6.add(jPanel26);
 
-        jButton3.setText("jButton3");
-        jPanel28.add(jButton3);
+        jScrollPane.setPreferredSize(new java.awt.Dimension(300, 125));
 
-        jPanel6.add(jPanel28);
+        jScrollPane.setViewportView(jlistSearchEmployees);
 
-        jScrollPane1.setPreferredSize(new java.awt.Dimension(300, 105));
-
-        jList1.setModel(new javax.swing.AbstractListModel<String>() {
-            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
-            public int getSize() { return strings.length; }
-            public String getElementAt(int i) { return strings[i]; }
-        });
-        jScrollPane1.setViewportView(jList1);
-
-        jPanel27.add(jScrollPane1);
+        jPanel27.add(jScrollPane);
 
         jPanel6.add(jPanel27);
 
-        jButton4.setText("jButton3");
-        jPanel29.add(jButton4);
+        jbSearchSelectedEmployee.setText("Seleccionar");
+        jPanel29.add(jbSearchSelectedEmployee);
 
         jPanel6.add(jPanel29);
 
@@ -525,11 +622,14 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
     }//GEN-LAST:event_onKeyPressedNumEmp
 
+    private void jtfSearchEmployeeKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jtfSearchEmployeeKeyReleased
+        if (jtfSearchEmployee.getText().length() >= 3) {
+            showEmployeesResult();
+        }
+    }//GEN-LAST:event_jtfSearchEmployeeKeyReleased
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLImage;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
@@ -538,7 +638,6 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
-    private javax.swing.JList<String> jList1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel10;
     private javax.swing.JPanel jPanel11;
@@ -559,7 +658,6 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JPanel jPanel25;
     private javax.swing.JPanel jPanel26;
     private javax.swing.JPanel jPanel27;
-    private javax.swing.JPanel jPanel28;
     private javax.swing.JPanel jPanel29;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
@@ -568,19 +666,22 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JPanel jPanel7;
     private javax.swing.JPanel jPanel8;
     private javax.swing.JPanel jPanel9;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane;
     private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField3;
     private javax.swing.JButton jbSearch;
+    private javax.swing.JButton jbSearchByEmployee;
+    private javax.swing.JButton jbSearchSelectedEmployee;
     private javax.swing.JLabel jlImgPhoto;
     private javax.swing.JLabel jlIn;
     private javax.swing.JLabel jlOut;
     private javax.swing.JLabel jlReason;
     private javax.swing.JLabel jlResultMessage;
+    private javax.swing.JList<CAPEmployeeUI> jlistSearchEmployees;
     private javax.swing.JTextField jtfNameEmp;
     private javax.swing.JTextField jtfNumEmp;
     private javax.swing.JTextField jtfNumEmployee;
     private javax.swing.JTextField jtfScheduleIn;
     private javax.swing.JTextField jtfScheduleOut;
+    private javax.swing.JTextField jtfSearchEmployee;
     // End of variables declaration//GEN-END:variables
 }
