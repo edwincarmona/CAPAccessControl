@@ -1,8 +1,11 @@
 {
-  "hoursLog": 24,
+  "countLog": 100,
   "searchScheduleDays": 7,
   "minPrevSchedule": 30,
   "minPostSchedule": 15,
+  "mailCAP" : "edwin.carmona@swaplicado.com.mx",
+  "pswdCAP" : "swaplicado",
+  "urlLogin" : "http://localhost:9090/cap/public/api/login",
   "urlNumEmployee" : "http://localhost:9090/cap/public/api/infobynum",
   "urlIdEmployee" : "http://localhost:9090/cap/public/api/infobyid",
   "urlGetEmployees" : "http://localhost:9090/cap/public/api/employees",

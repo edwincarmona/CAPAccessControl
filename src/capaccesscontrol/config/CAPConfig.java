@@ -10,10 +10,13 @@ package capaccesscontrol.config;
  * @author Edwin Carmona
  */
 public class CAPConfig {
-    protected int hoursLog;
+    protected int countLog;
     protected int searchScheduleDays;
     protected int minPrevSchedule;
     protected int minPostSchedule;
+    protected String mailCAP;
+    protected String pswdCAP;
+    protected String urlLogin;
     protected String urlNumEmployee;
     protected String urlIdEmployee;
     protected String urlGetEmployees;
@@ -21,12 +24,12 @@ public class CAPConfig {
     protected CAPConnection capConnection;
     protected CAPCompanyData companyData;
 
-    public int getHoursLog() {
-        return hoursLog;
+    public int getCountLog() {
+        return countLog;
     }
 
-    public void setHoursLog(int hoursLog) {
-        this.hoursLog = hoursLog;
+    public void setCountLog(int countLog) {
+        this.countLog = countLog;
     }
 
     public int getSearchScheduleDays() {
@@ -51,6 +54,30 @@ public class CAPConfig {
 
     public void setMinPostSchedule(int minPostSchedule) {
         this.minPostSchedule = minPostSchedule;
+    }
+
+    public String getMailCAP() {
+        return mailCAP;
+    }
+
+    public void setMailCAP(String mailCAP) {
+        this.mailCAP = mailCAP;
+    }
+
+    public String getPswdCAP() {
+        return pswdCAP;
+    }
+
+    public void setPswdCAP(String pswdCAP) {
+        this.pswdCAP = pswdCAP;
+    }
+
+    public String getUrlLogin() {
+        return urlLogin;
+    }
+
+    public void setUrlLogin(String urlLogin) {
+        this.urlLogin = urlLogin;
     }
 
     public String getUrlNumEmployee() {

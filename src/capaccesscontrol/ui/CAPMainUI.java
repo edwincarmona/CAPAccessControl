@@ -19,12 +19,15 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -38,9 +41,12 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private final CAPConfig oConfig;
     private CAPMySql oSiieMySql;
     private CAPMySql oCapMySql;
+    private CAPRequest oCAPRequest;
     private Date tDate;
     private List<CAPEmployeeResponse> lEmployees;
     private CAPEmployeeUI oEmployeeUI;
+    private List<CAPLogUI> lLog;
+    private CAPLogUI oLog;
 
     /**
      * Creates new form CAPMainUI
@@ -68,10 +74,13 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
                                 oConfig.getCapConnection().getUserDb(), 
                                 oConfig.getCapConnection().getPswdDb());
         
+        oCAPRequest = new CAPRequest(oConfig.getMailCAP(), oConfig.getPswdCAP(), oConfig.getUrlLogin());
+        
         resetFields();
         jbSearch.addActionListener(this);
         jbSearchByEmployee.addActionListener(this);
         jbSearchSelectedEmployee.addActionListener(this);
+        jbShowLog.addActionListener(this);
         
         jlistSearchEmployees.addMouseListener(new MouseAdapter() {
             @Override
@@ -89,6 +98,24 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             }
         });
         
+        jlistLog.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent evt) {
+                JList list = (JList)evt.getSource();
+                if (evt.getClickCount() == 2) {
+
+                    // Double-click detected
+                    int index = list.locationToIndex(evt.getPoint());
+                    if (index > -1) {
+                        oLog = (CAPLogUI) list.getModel().getElementAt(index);
+                        showLog();
+                    }
+                }
+            }
+        });
+        
+        lLog = new ArrayList();
+        
         disableSearchByEmployee();
     }
     
@@ -98,6 +125,8 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfNameEmp.setText("");
         jlReason.setText("");
         jlImgPhoto.setText("");
+        javax.swing.ImageIcon photoIcon = new ImageIcon();
+        jlImgPhoto.setIcon(photoIcon);
     }
     
     private void disableSearchByEmployee() {
@@ -152,13 +181,16 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         
         tDate = new Date();
         
-        CAPResponse response = CAPRequest.requestByNumEmployee(tDate, numEmp, oConfig.getSearchScheduleDays(), oConfig.getUrlNumEmployee());
+        oLog = new CAPLogUI();
+        oLog.setTimeStamp(tDate);
+        showTimestamp(tDate);
+        CAPResponse response = oCAPRequest.requestByNumEmployee(tDate, numEmp, oConfig.getSearchScheduleDays(), oConfig.getUrlNumEmployee());
         
         this.processCAPResponse(response);
     }
     
     private void actionSearchByEmployee() {
-        CAPResponse response = CAPRequest.requestEmployees(oConfig.getUrlGetEmployees());
+        CAPResponse response = oCAPRequest.requestEmployees(oConfig.getUrlGetEmployees());
         
         if (response.getEmployees() == null) {
             return;
@@ -176,7 +208,11 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     
     private void actionSearchEmployee() {
         tDate = new Date();
-        CAPResponse response = CAPRequest.requestByIdEmployee(tDate, oEmployeeUI.getIdEmployee(), oConfig.getSearchScheduleDays(), oConfig.getUrlIdEmployee());
+        oLog = new CAPLogUI();
+        oLog.setTimeStamp(tDate);
+        showTimestamp(tDate);
+        
+        CAPResponse response = oCAPRequest.requestByIdEmployee(tDate, oEmployeeUI.getIdEmployee(), oConfig.getSearchScheduleDays(), oConfig.getUrlIdEmployee());
         this.processCAPResponse(response);
         
         DefaultListModel model = new DefaultListModel();
@@ -192,14 +228,27 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             return;
         }
         
-        showPhoto(response);
-        this.showData(response);
+        ImageIcon icon = CAPSiieDb.getPhoto(oSiieMySql.connectMySQL(), response.getEmployee().getExternal_id());
+        oLog.setPhoto(icon);
+        showPhoto(icon);
+        
+        this.showData(response.getEmployee().getNum_employee(), response.getEmployee().getName());
+        oLog.setNumEmployee(response.getEmployee().getNum_employee());
+        oLog.setNameEmployee(response.getEmployee().getName());
         
         if (! validateAccess(response)) {
+            
+            oLog.setAuthorized(false);
+            lLog.add(0, oLog);
+            updateLog();
+            
             return;
         }
         
         this.showAutorized(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch());
+        oLog.setAuthorized(true);
+        lLog.add(0, oLog);
+        updateLog();
     }
     
     private void showEmployeesResult() {
@@ -229,7 +278,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         try
         {
             Integer.parseInt(s);
-            
+
             return true;
         }
         catch (NumberFormatException ex) {
@@ -237,14 +286,20 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
     }
     
-    private void showPhoto(CAPResponse response) {
-        javax.swing.ImageIcon photoIcon = CAPSiieDb.getPhoto(oSiieMySql.connectMySQL(), response.getEmployee().getExternal_id());
+    private void showPhoto(javax.swing.ImageIcon photoIcon) {
         jlImgPhoto.setIcon(photoIcon);
     }
     
-    private void showData(CAPResponse response) {
-        jtfNumEmp.setText(response.getEmployee().getNum_employee());
-        jtfNameEmp.setText(response.getEmployee().getName());
+    private void showData(String numEmployee, String nameEmployee) {
+        jtfNumEmp.setText(numEmployee);
+        jtfNameEmp.setText(nameEmployee);
+    }
+    
+    private void showTimestamp(Date dtDate) {
+        DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+        String sDate = df.format(dtDate);
+        
+        jtfTimestamp.setText(sDate);
     }
     
     private boolean validateResponse(CAPResponse response) {
@@ -258,7 +313,10 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     
     private boolean validateAccess(CAPResponse response) {
         if (! response.getEmployee().isIs_active() || response.getEmployee().isIs_delete()) {
-            showUnauthorized("El empleado está desactivado en el sistema", "", "", false);
+            String reason = "El empleado está desactivado en el sistema";
+            showUnauthorized(reason, "", "", false);
+            oLog.setReasons(reason);
+            
             return false;
         }
         
@@ -275,8 +333,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
                 sIn = response.getNextSchedule().getInDateTimeSch();
                 sOut = response.getNextSchedule().getOutDateTimeSch();
             }
-            
-            showUnauthorized("El empleado tiene programado: " + reason + " para el día de hoy", sIn, sOut, true);
+            String reasons = "El empleado tiene programado: " + reason + " para el día de hoy";
+            showUnauthorized(reasons, sIn, sOut, true);
+            oLog.setReasons(reasons);
             
             return false;
         }
@@ -285,8 +344,11 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             if (! CAPCore.isOnShift(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch(), tDate, oConfig.getMinPrevSchedule(), oConfig.getMinPostSchedule())) {
                 sIn = response.getSchedule().getInDateTimeSch();
                 sOut = response.getSchedule().getOutDateTimeSch();
-            
-                showUnauthorized("El empleado está fuera de su horario", sIn, sOut, false);
+                
+                String reasons = "El empleado está fuera de su horario";
+                showUnauthorized(reasons, sIn, sOut, false);
+                oLog.setReasons(reasons);
+                
                 return false;
             }
             else {
@@ -298,8 +360,10 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
                 sIn = response.getNextSchedule().getInDateTimeSch();
                 sOut = response.getNextSchedule().getOutDateTimeSch();
             }
-
-            showUnauthorized("El empleado no tiene horario asignado para el día de hoy", sIn, sOut, true);
+            
+            String reasons = "El empleado no tiene horario asignado para el día de hoy";
+            showUnauthorized(reasons, sIn, sOut, true);
+            oLog.setReasons(reasons);
             
             return false;
         }
@@ -354,6 +418,42 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfScheduleOut.setText(scheduleOut);
     }
     
+    private void actionShowLog() {
+        oLog = jlistLog.getSelectedValue();
+        showLog();
+    }
+    
+    private void updateLog() {
+        DefaultListModel model = new DefaultListModel();
+        
+        if (oConfig.getCountLog() < lLog.size()) {
+            lLog.remove(lLog.size() - 1);
+        }
+        
+        for (CAPLogUI cAPLogUI : lLog) {
+            model.addElement(cAPLogUI);
+        }
+        
+        jlistLog.setModel(model);
+    }
+    
+    private void showLog() {
+        resetFields();
+        
+        showPhoto(oLog.getPhoto());
+        showData(oLog.getNumEmployee(), oLog.getNameEmployee());
+        showTimestamp(oLog.getTimeStamp());
+        
+        if (oLog.isAuthorized()) {
+            showAutorized("", "");
+        }
+        else {
+            showUnauthorized(oLog.getReasons(), "", "", false);
+        }
+        
+        jtfNumEmployee.requestFocusInWindow();
+    }
+    
     @Override
     public void actionPerformed(ActionEvent evt) {
         if (evt.getSource() instanceof JButton) {
@@ -367,6 +467,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             }
             else if (button == jbSearchSelectedEmployee) {
                 actionSearchSelectedEmployee();
+            }
+            else if (button == jbShowLog) {
+                actionShowLog();
             }
         }
     }
@@ -419,6 +522,8 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfNumEmp = new javax.swing.JTextField();
         jPanel19 = new javax.swing.JPanel();
         jtfNameEmp = new javax.swing.JTextField();
+        jPanel30 = new javax.swing.JPanel();
+        jtfTimestamp = new javax.swing.JTextField();
         jPanel16 = new javax.swing.JPanel();
         jlResultMessage = new javax.swing.JLabel();
         jPanel17 = new javax.swing.JPanel();
@@ -433,6 +538,11 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel24 = new javax.swing.JPanel();
         jtfScheduleOut = new javax.swing.JTextField();
         jPanel3 = new javax.swing.JPanel();
+        jLabel3 = new javax.swing.JLabel();
+        jPanel28 = new javax.swing.JPanel();
+        jbShowLog = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jlistLog = new javax.swing.JList<>();
 
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -448,9 +558,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel5.add(jPanel7);
 
         jLImage.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLImage.setText("Foto");
         jLImage.setToolTipText("Foto (tamaño sugerido: 100×100 px)");
         jLImage.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        jLImage.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         jLImage.setPreferredSize(new java.awt.Dimension(75, 75));
         jPanel8.add(jLImage);
 
@@ -553,6 +663,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel15.add(jlImgPhoto);
 
         jtfNumEmp.setEditable(false);
+        jtfNumEmp.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         jtfNumEmp.setText("jTextField2");
         jtfNumEmp.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel18.add(jtfNumEmp);
@@ -565,6 +676,14 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel19.add(jtfNameEmp);
 
         jPanel15.add(jPanel19);
+
+        jtfTimestamp.setEditable(false);
+        jtfTimestamp.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        jtfTimestamp.setText("jTextField4");
+        jtfTimestamp.setPreferredSize(new java.awt.Dimension(200, 23));
+        jPanel30.add(jtfTimestamp);
+
+        jPanel15.add(jPanel30);
 
         jPanel14.add(jPanel15);
 
@@ -588,6 +707,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel17.add(jPanel23);
 
         jtfScheduleIn.setEditable(false);
+        jtfScheduleIn.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         jtfScheduleIn.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel21.add(jtfScheduleIn);
 
@@ -600,6 +720,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jPanel17.add(jPanel22);
 
         jtfScheduleOut.setEditable(false);
+        jtfScheduleOut.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         jtfScheduleOut.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel24.add(jtfScheduleOut);
 
@@ -612,7 +733,21 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 306, -1, 283));
 
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder("Bitácora de consulta"));
-        jPanel3.setLayout(new java.awt.BorderLayout());
+
+        jLabel3.setPreferredSize(new java.awt.Dimension(150, 23));
+        jPanel3.add(jLabel3);
+
+        jbShowLog.setText("Ver");
+        jPanel28.add(jbShowLog);
+
+        jPanel3.add(jPanel28);
+
+        jScrollPane1.setPreferredSize(new java.awt.Dimension(225, 520));
+
+        jScrollPane1.setViewportView(jlistLog);
+
+        jPanel3.add(jScrollPane1);
+
         getContentPane().add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 0, 240, 589));
     }// </editor-fold>//GEN-END:initComponents
 
@@ -633,6 +768,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JLabel jLImage;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
@@ -658,8 +794,10 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JPanel jPanel25;
     private javax.swing.JPanel jPanel26;
     private javax.swing.JPanel jPanel27;
+    private javax.swing.JPanel jPanel28;
     private javax.swing.JPanel jPanel29;
     private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel30;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
     private javax.swing.JPanel jPanel6;
@@ -667,15 +805,18 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JPanel jPanel8;
     private javax.swing.JPanel jPanel9;
     private javax.swing.JScrollPane jScrollPane;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JButton jbSearch;
     private javax.swing.JButton jbSearchByEmployee;
     private javax.swing.JButton jbSearchSelectedEmployee;
+    private javax.swing.JButton jbShowLog;
     private javax.swing.JLabel jlImgPhoto;
     private javax.swing.JLabel jlIn;
     private javax.swing.JLabel jlOut;
     private javax.swing.JLabel jlReason;
     private javax.swing.JLabel jlResultMessage;
+    private javax.swing.JList<CAPLogUI> jlistLog;
     private javax.swing.JList<CAPEmployeeUI> jlistSearchEmployees;
     private javax.swing.JTextField jtfNameEmp;
     private javax.swing.JTextField jtfNumEmp;
@@ -683,5 +824,6 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JTextField jtfScheduleIn;
     private javax.swing.JTextField jtfScheduleOut;
     private javax.swing.JTextField jtfSearchEmployee;
+    private javax.swing.JTextField jtfTimestamp;
     // End of variables declaration//GEN-END:variables
 }
