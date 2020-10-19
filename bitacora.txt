@@ -1,0 +1,6 @@
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 12:57:05, checador: Local
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 12:58:05, checador: Local
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 15:07:32, checador: Local
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 15:08:05, checador: Local
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 15:13:08, checador: Local
+Se conecto el lector biometrico en CAP Reloj Checador 2020/10/19 15:15:23, checador: Local

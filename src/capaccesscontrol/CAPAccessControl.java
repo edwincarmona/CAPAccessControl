@@ -8,6 +8,7 @@ package capaccesscontrol;
 import capaccesscontrol.ui.CAPMainUI;
 import capaccesscontrol.config.CAPConfig;
 import capaccesscontrol.config.CAPConfigReader;
+import capaccesscontrol.core.CAPDigitalPersona;
 import javax.swing.JFrame;
 
 /**
@@ -30,7 +31,11 @@ public class CAPAccessControl {
         ui.setResizable(false);
         ui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         ui.setLocationRelativeTo(null);
+        
+        CAPDigitalPersona obj = new CAPDigitalPersona(ui);
+        
         ui.setVisible(true);
+        
     }
     
 }

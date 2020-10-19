@@ -18,8 +18,6 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -126,7 +124,6 @@ public class CAPRequest {
             
             try (Scanner scanner = new Scanner(response)) {
                 String responseBody = scanner.useDelimiter("\\A").next();
-                System.out.println(responseBody);
 
                 ObjectMapper mapper = new ObjectMapper();
                 CAPResponse capResponse = mapper.readValue(responseBody, CAPResponse.class);
@@ -173,7 +170,6 @@ public class CAPRequest {
             
             try (Scanner scanner = new Scanner(response)) {
                 String responseBody = scanner.useDelimiter("\\A").next();
-                System.out.println(responseBody);
                 
                 ObjectMapper mapper = new ObjectMapper();
                 CAPLoginResponse capResponse = mapper.readValue(responseBody, CAPLoginResponse.class);

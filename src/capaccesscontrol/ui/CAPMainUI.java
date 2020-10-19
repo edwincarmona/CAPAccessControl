@@ -92,7 +92,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
                     int index = list.locationToIndex(evt.getPoint());
                     if (index > -1) {
                         oEmployeeUI = (CAPEmployeeUI) list.getModel().getElementAt(index);
-                        actionSearchEmployee();
+                        actionSearchEmployeeById(oEmployeeUI.getIdEmployee());
                     }
                 }
             }
@@ -203,16 +203,16 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     
     private void actionSearchSelectedEmployee() {
         oEmployeeUI = jlistSearchEmployees.getSelectedValue();
-        actionSearchEmployee();
+        actionSearchEmployeeById(oEmployeeUI.getIdEmployee());
     }
     
-    private void actionSearchEmployee() {
+    public void actionSearchEmployeeById(int employeeId) {
         tDate = new Date();
         oLog = new CAPLogUI();
         oLog.setTimeStamp(tDate);
         showTimestamp(tDate);
         
-        CAPResponse response = oCAPRequest.requestByIdEmployee(tDate, oEmployeeUI.getIdEmployee(), oConfig.getSearchScheduleDays(), oConfig.getUrlIdEmployee());
+        CAPResponse response = oCAPRequest.requestByIdEmployee(tDate, employeeId, oConfig.getSearchScheduleDays(), oConfig.getUrlIdEmployee());
         this.processCAPResponse(response);
         
         DefaultListModel model = new DefaultListModel();
