@@ -35,7 +35,6 @@ public class CAPAccessControl {
         CAPDigitalPersona obj = new CAPDigitalPersona(ui);
         
         ui.setVisible(true);
-        
     }
     
 }

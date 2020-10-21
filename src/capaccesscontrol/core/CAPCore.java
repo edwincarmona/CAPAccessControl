@@ -17,6 +17,18 @@ import java.util.logging.Logger;
  * @author Edwin Carmona
  */
 public class CAPCore {
+    /**
+     * Determina si la hora recibida está dentro del horario indicado.
+     * Contempla minutos previos y posteriores al horario.
+     * 
+     * @param inDateTimeSch
+     * @param outDateTimeSch
+     * @param dtDate
+     * @param nMinsPrevious
+     * @param nMinsAfter
+     * 
+     * @return 
+     */
     public static boolean isOnShift(String inDateTimeSch, String outDateTimeSch, Date dtDate, int nMinsPrevious, int nMinsAfter) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -40,7 +52,12 @@ public class CAPCore {
         return false;
     }
     
-    //Convert Date to Calendar
+    /**
+     * Convert Date to Calendar.
+     * 
+     * @param date
+     * @return 
+     */
     private static Calendar dateToCalendar(Date date) {
 
             Calendar calendar = Calendar.getInstance();
@@ -49,7 +66,12 @@ public class CAPCore {
 
     }
 
-    //Convert Calendar to Date
+    /**
+     * Convert Calendar to Date
+     * 
+     * @param calendar
+     * @return 
+     */
     private Date calendarToDate(Calendar calendar) {
             return calendar.getTime();
     }

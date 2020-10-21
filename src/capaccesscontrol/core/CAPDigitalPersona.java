@@ -51,10 +51,16 @@ public class CAPDigitalPersona {
         this.start();
     }
     
+    /**
+     * Iniciar a capturar.
+     */
     private void start() {
         oReader.startCapture();
     }
     
+    /**
+     * Inicializar métodos del lector.
+     */
     private void startReaderMethods() {
         envioCorreo email = new envioCorreo();
 
@@ -121,11 +127,15 @@ public class CAPDigitalPersona {
 
     }
     
+    /**
+     * Procesar captura.
+     * @param sample 
+     */
     private void processTake(DPFPSample sample) {
         // Procesar la muestra de la huella y crear un conjunto de características con el propósito de verificacion.
         featuresDP = oChecador.extraerCaracteristicas(sample, DPFPDataPurpose.DATA_PURPOSE_VERIFICATION);
         try {
-            int id = identifyFingerprint();
+            int id = this.identifyFingerprint();
             
             if (id > 0) {
                 oCapGui.actionSearchEmployeeById(id);
@@ -136,8 +146,15 @@ public class CAPDigitalPersona {
         }
     }
     
-    // Identifica a una persona registrada por medio de su huella digital
-    public int identifyFingerprint() throws IOException {
+    /**
+     * Identifica a una persona registrada por medio de su huella digital.
+     * Devuelve el id del empleado que corresponde a la huella digital, si la huella 
+     * no corresponde a nadie retorna un -1;
+     * 
+     * @return
+     * @throws IOException 
+     */
+    private int identifyFingerprint() throws IOException {
         //try{
         //Establece los valores para la sentencia SQL
         //Connection c = con.conectar();
@@ -145,23 +162,18 @@ public class CAPDigitalPersona {
         //PreparedStatement identificarStmt = c.prepareStatement("SELECT id,employee_id,print FROM fingerprints");
         //ResultSet rs = identificarStmt.executeQuery();
         //Si se encuentra el nombre en la base de datos
-        for (int i = 0; oChecador.getHuellas().size() > i; i++) {
+        for (int index = 0; oChecador.getHuellas().size() > index; index++) {
             //Lee la plantilla de la base de datos
             //byte templateBuffer[] = rs.getBytes("print");
-            byte templateBuffer[] = oChecador.getHuellas().get(i);
-            //int employee_id = rs.getInt("employee_id");
-            int employee_id = oChecador.getListaempleados().get(i);
+            byte templateBuffer[] = oChecador.getHuellas().get(index);
             //Crea una nueva plantilla a partir de la guardada en la base de datos
             DPFPTemplate referenceTemplate = DPFPGlobal.getTemplateFactory().createTemplate(templateBuffer);
-            //Envia la plantilla creada al objeto contenedor de Template del componente de huella digital
-            oChecador.setTemplate(referenceTemplate);
-
             //Compara las caracteristicas de la huella recientemente capturada con alguna plantilla guardada en la base de datos que concide con ese tipo
-            DPFPVerificationResult result = oVerifier.verify(featuresDP, oChecador.getTemplate());
-
+            DPFPVerificationResult result = oVerifier.verify(featuresDP, referenceTemplate);
             //Compara las plantillas, si encuentra correspondenica dibuja el mapa que indica el nombre de la persona que coincidio
             if (result.isVerified()) {
-                return employee_id;
+                 //int employee_id = rs.getInt("employee_id");
+                return oChecador.getListaempleados().get(index);
             }
         }
         

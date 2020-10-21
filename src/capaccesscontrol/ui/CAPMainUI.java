@@ -9,6 +9,7 @@ import capaccesscontrol.config.CAPConfig;
 import capaccesscontrol.core.CAPCore;
 import capaccesscontrol.db.CAPMySql;
 import capaccesscontrol.db.CAPSiieDb;
+import capaccesscontrol.packet.CAPAbsenceResponse;
 import capaccesscontrol.packet.CAPEmployeeResponse;
 import capaccesscontrol.packet.CAPEventResponse;
 import capaccesscontrol.packet.CAPRequest;
@@ -58,22 +59,28 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         initCustom();
     }
     
+    /**
+     * Inicia objetos y componentes necesarios para el funcionamiento de la clase.
+     */
     private void initCustom() {
         startClock();
         setImage();
         
+        // Objeto para conexión a base de datos de SIIE.
         oSiieMySql = new CAPMySql(oConfig.getSiieConnection().getNameDb(), 
                                 oConfig.getSiieConnection().getHostDb(),
                                 oConfig.getSiieConnection().getPortDb(), 
                                 oConfig.getSiieConnection().getUserDb(), 
                                 oConfig.getSiieConnection().getPswdDb());
         
+        // Objeto para conexión a base de datos de CAP.
         oCapMySql = new CAPMySql(oConfig.getCapConnection().getNameDb(), 
                                 oConfig.getCapConnection().getHostDb(),
                                 oConfig.getCapConnection().getPortDb(), 
                                 oConfig.getCapConnection().getUserDb(), 
                                 oConfig.getCapConnection().getPswdDb());
         
+        // Objeto para realizar peticiones a CAP.
         oCAPRequest = new CAPRequest(oConfig.getMailCAP(), oConfig.getPswdCAP(), oConfig.getUrlLogin());
         
         resetFields();
@@ -82,6 +89,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jbSearchSelectedEmployee.addActionListener(this);
         jbShowLog.addActionListener(this);
         
+        /**
+         * Detectar doble click en la lista empleados para realizar la búsqueda.
+         */
         jlistSearchEmployees.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent evt) {
@@ -98,6 +108,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             }
         });
         
+        /**
+         * Detectar doble click en la lista de la bitácora para visualizar datos.
+         */
         jlistLog.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent evt) {
@@ -119,7 +132,11 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         disableSearchByEmployee();
     }
     
+    /**
+     * Reiniciar etiquetas y campos de texto.
+     */
     private void resetFields() {
+        jtfSearching.setText("");
         jtfNumEmployee.setText("");
         jtfNumEmp.setText("");
         jtfNameEmp.setText("");
@@ -129,6 +146,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jlImgPhoto.setIcon(photoIcon);
     }
     
+    /**
+     * Este método inactiva la búsqueda por empleado.
+     */
     private void disableSearchByEmployee() {
         jtfSearchEmployee.setEditable(false);
         jlistSearchEmployees.setEnabled(false);
@@ -137,17 +157,26 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfNumEmployee.requestFocusInWindow();
     }
     
+    /**
+     * Activar búsqueda de empleado.
+     */
     private void enableSearchByEmployee() {
         jtfSearchEmployee.setEditable(true);
         jlistSearchEmployees.setEnabled(true);
         jbSearchSelectedEmployee.setEnabled(true);
     }
     
+    /**
+     * Carga la imagen de la empresa configurada en el archivo cfg.json.
+     */
     private void setImage() {
         jLImage.setIcon(new javax.swing.ImageIcon(oConfig.getCompanyData().getCompanyImage()));
         jLImage.setPreferredSize(new java.awt.Dimension(75, 75));
     }
 
+    /**
+     * Iniciar reloj y visualizar en pantalla.
+     */
     private void startClock() {
         SimpleDateFormat format1 = new SimpleDateFormat("dd-MM-yyy HH:mm:ss");
         
@@ -168,6 +197,10 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         t.start();
     }
     
+    /**
+     * Buscar info de empleado por número de empleado.
+     * Obtiene el número de empleado del jtfield
+     */
     private void actionSearchByEmployeeNum() {
         String numEmp = jtfNumEmployee.getText();
         
@@ -189,6 +222,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         this.processCAPResponse(response);
     }
     
+    /**
+     * Activar búsqueda de empleados, solicitar empleados activos y no eliminados de CAP.
+     */
     private void actionSearchByEmployee() {
         CAPResponse response = oCAPRequest.requestEmployees(oConfig.getUrlGetEmployees());
         
@@ -201,11 +237,20 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         lEmployees = response.getEmployees();
     }
     
+    /**
+     * Obtener empleado seleccionado y solicitar búsqueda por id de empleado.
+     */
     private void actionSearchSelectedEmployee() {
         oEmployeeUI = jlistSearchEmployees.getSelectedValue();
         actionSearchEmployeeById(oEmployeeUI.getIdEmployee());
     }
     
+    /**
+     * Búsqueda de empleado por id.
+     * Realiza la petición al servidor de CAP
+     * 
+     * @param employeeId 
+     */
     public void actionSearchEmployeeById(int employeeId) {
         tDate = new Date();
         oLog = new CAPLogUI();
@@ -221,6 +266,13 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         disableSearchByEmployee();
     }
     
+    /**
+     * Procesar respuesta del servidor.
+     * Este método valida los datos de la respuesta y delega a los siguientes métodos
+     * para mostrar info de empleado y si se le permite o no la entrada a la empresa
+     * 
+     * @param response
+     */
     private void processCAPResponse(CAPResponse response) {
         resetFields();
         
@@ -228,16 +280,21 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             return;
         }
         
+        /**
+         * si la respuesta del servidor es válida muestra la foto del empleado que requiere acceso
+         */
         ImageIcon icon = CAPSiieDb.getPhoto(oSiieMySql.connectMySQL(), response.getEmployee().getExternal_id());
         oLog.setPhoto(icon);
         showPhoto(icon);
         
+        // se muestra la info del empleado
         this.showData(response.getEmployee().getNum_employee(), response.getEmployee().getName());
         oLog.setNumEmployee(response.getEmployee().getNum_employee());
         oLog.setNameEmployee(response.getEmployee().getName());
         
+        // se valida el acceso mediante la respuesta del servidor
         if (! validateAccess(response)) {
-            
+            //si se niega el acceso se muestra el mensaje en pantalla y se escribe en la bitácora
             oLog.setAuthorized(false);
             lLog.add(0, oLog);
             updateLog();
@@ -245,17 +302,25 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             return;
         }
         
+        // si el acceso al empleado es permitido se muestra la autorización y se escribe el suceso en la biácora
         this.showAutorized(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch());
         oLog.setAuthorized(true);
         lLog.add(0, oLog);
         updateLog();
     }
     
+    /**
+     * Muestra los resultados que tengas coincidencias con el criterio buscado.
+     * 
+     * En base a lo escrito en el campo de empleado se filtra de la lista obtenida en el servidor los 
+     * empleados que cumplan con el criterio de búsqueda y se muestran en la lista de búsqueda de empleados.
+     */
     private void showEmployeesResult() {
         String empText = jtfSearchEmployee.getText();
         CAPEmployeeUI empUi;
         DefaultListModel model = new DefaultListModel();
         
+        // se filtran los empleados que contengan en el nombre el texto buscado
         List<CAPEmployeeResponse> result = lEmployees.stream()
                 .filter(item -> (item.getName().toLowerCase()).contains(empText.toLowerCase()))
                 .collect(Collectors.toList());
@@ -270,15 +335,21 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             model.addElement(empUi);
         }
         
+        // el modelo con la lista de empleados resultante de la búsqueda es fijada en pantalla
         jlistSearchEmployees.setModel(model);
     }
     
+    /**
+     * Devuelve true si la cadena recibida es un entero.
+     * 
+     * @param s
+     * @return
+     */
     private boolean isStringInt(String s)
     {
         try
         {
             Integer.parseInt(s);
-
             return true;
         }
         catch (NumberFormatException ex) {
@@ -286,15 +357,30 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
     }
     
+    /**
+     * Muestra en pantalla la imagen del empleado recibida.
+     * 
+     * @param photoIcon 
+     */
     private void showPhoto(javax.swing.ImageIcon photoIcon) {
         jlImgPhoto.setIcon(photoIcon);
     }
     
+    /**
+     * Muestra en pantalla número y nombre de empleado.
+     * 
+     * @param numEmployee
+     * @param nameEmployee 
+     */
     private void showData(String numEmployee, String nameEmployee) {
         jtfNumEmp.setText(numEmployee);
         jtfNameEmp.setText(nameEmployee);
     }
     
+    /**
+     * Muestra en pantalla el timestamp de la fecha y hora de consulta.
+     * @param dtDate 
+     */
     private void showTimestamp(Date dtDate) {
         DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm");
         String sDate = df.format(dtDate);
@@ -302,6 +388,12 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfTimestamp.setText(sDate);
     }
     
+    /**
+     * Validación de respuesta del servidor
+     * 
+     * @param response
+     * @return 
+     */
     private boolean validateResponse(CAPResponse response) {
         if (response.getEmployee() == null) {
             showUnauthorized("No se encontró al empleado en el sistema", "", "", false);
@@ -311,6 +403,16 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         return true;
     }
     
+    /**
+     * Valida si el empleado tiene o no permitido el acceso.
+     * 
+     * Para que el empleado se le permita ingresar no debe estar desactivado o eliminado, 
+     * no debe de tener programada ninguna incidencia, debe tener un horario programado para
+     * el día en cuestión y además debe estar dentro de este.
+     * 
+     * @param response
+     * @return 
+     */
     private boolean validateAccess(CAPResponse response) {
         if (! response.getEmployee().isIs_active() || response.getEmployee().isIs_delete()) {
             String reason = "El empleado está desactivado en el sistema";
@@ -323,9 +425,10 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         String sIn = "";
         String sOut = "";
         
+        // Si el empleado tiene eventos programados
         if (response.getEvents() != null && response.getEvents().size() > 0) {
             String reason = "";
-            for (CAPEventResponse event :  response.getEvents()) {
+            for (CAPEventResponse event : response.getEvents()) {
                 reason = reason.isEmpty() ? event.getTypeName() : (reason + ", " + event.getTypeName());
             }
             
@@ -340,7 +443,28 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
             return false;
         }
         
+        // Si el empleado tiene incidencias programadas
+        if (response.getAbsences() != null && response.getAbsences().size() > 0) {
+            String reason = "";
+            for (CAPAbsenceResponse abs : response.getAbsences()) {
+                reason = reason.isEmpty() ? abs.getType_name() : (reason + ", " + abs.getType_name());
+            }
+            
+            if (response.getNextSchedule() != null) {
+                sIn = response.getNextSchedule().getInDateTimeSch();
+                sOut = response.getNextSchedule().getOutDateTimeSch();
+            }
+            
+            String reasons = "El empleado tiene incidencias: " + reason + " para el día de hoy";
+            showUnauthorized(reasons, sIn, sOut, true);
+            oLog.setReasons(reasons);
+            
+            return false;
+        }
+        
+        // si el empleado tiene un horario
         if (response.getSchedule() != null) {
+            // Si el empleado está o no en su horario
             if (! CAPCore.isOnShift(response.getSchedule().getInDateTimeSch(), response.getSchedule().getOutDateTimeSch(), tDate, oConfig.getMinPrevSchedule(), oConfig.getMinPostSchedule())) {
                 sIn = response.getSchedule().getInDateTimeSch();
                 sOut = response.getSchedule().getOutDateTimeSch();
@@ -369,6 +493,14 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
     }
     
+    /**
+     * Mostrar acceso denegado.
+     * 
+     * @param reason
+     * @param scheduleIn
+     * @param scheduleOut
+     * @param isNext 
+     */
     private void showUnauthorized(String reason, String scheduleIn, String scheduleOut, boolean isNext) {
         String text = "<html>"
                         + "<body style='text-align: center; background-color: red;'>"
@@ -401,6 +533,12 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfScheduleOut.setText(scheduleOut);
     }
     
+    /**
+     * Mostrar autorización.
+     * 
+     * @param scheduleIn
+     * @param scheduleOut 
+     */
     private void showAutorized(String scheduleIn, String scheduleOut) {
         String text = "<html>"
                         + "<body style='text-align: center; background-color: green;'>"
@@ -418,11 +556,17 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jtfScheduleOut.setText(scheduleOut);
     }
     
+    /**
+     * Mostrar valor seleccionado de la bitácora.
+     */
     private void actionShowLog() {
         oLog = jlistLog.getSelectedValue();
         showLog();
     }
     
+    /**
+     * Actualizar bitácora.
+     */
     private void updateLog() {
         DefaultListModel model = new DefaultListModel();
         
@@ -437,6 +581,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jlistLog.setModel(model);
     }
     
+    /**
+     * Mostrar datos de bitácora.
+     */
     private void showLog() {
         resetFields();
         
@@ -501,7 +648,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jLabel6 = new javax.swing.JLabel();
         jbSearch = new javax.swing.JButton();
         jPanel13 = new javax.swing.JPanel();
-        jLabel7 = new javax.swing.JLabel();
+        jtfSearching = new javax.swing.JTextField();
         jbSearchByEmployee = new javax.swing.JButton();
         jPanel6 = new javax.swing.JPanel();
         jPanel25 = new javax.swing.JPanel();
@@ -544,6 +691,11 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         jScrollPane1 = new javax.swing.JScrollPane();
         jlistLog = new javax.swing.JList<>();
 
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowOpened(java.awt.event.WindowEvent evt) {
+                formWindowOpened(evt);
+            }
+        });
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("Buscar"));
@@ -600,8 +752,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
 
         jPanel5.add(jPanel12);
 
-        jLabel7.setPreferredSize(new java.awt.Dimension(130, 23));
-        jPanel13.add(jLabel7);
+        jtfSearching.setEditable(false);
+        jtfSearching.setPreferredSize(new java.awt.Dimension(175, 23));
+        jPanel13.add(jtfSearching);
 
         jbSearchByEmployee.setText("Búsqueda por nombre");
         jPanel13.add(jbSearchByEmployee);
@@ -664,14 +817,12 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
 
         jtfNumEmp.setEditable(false);
         jtfNumEmp.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jtfNumEmp.setText("jTextField2");
         jtfNumEmp.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel18.add(jtfNumEmp);
 
         jPanel15.add(jPanel18);
 
         jtfNameEmp.setEditable(false);
-        jtfNameEmp.setText("jTextField4");
         jtfNameEmp.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel19.add(jtfNameEmp);
 
@@ -679,7 +830,6 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
 
         jtfTimestamp.setEditable(false);
         jtfTimestamp.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jtfTimestamp.setText("jTextField4");
         jtfTimestamp.setPreferredSize(new java.awt.Dimension(200, 23));
         jPanel30.add(jtfTimestamp);
 
@@ -763,6 +913,9 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
         }
     }//GEN-LAST:event_jtfSearchEmployeeKeyReleased
 
+    private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
+        jtfNumEmployee.requestFocusInWindow();
+    }//GEN-LAST:event_formWindowOpened
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel jLImage;
@@ -771,7 +924,6 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
@@ -824,6 +976,7 @@ public class CAPMainUI extends javax.swing.JFrame implements ActionListener {
     private javax.swing.JTextField jtfScheduleIn;
     private javax.swing.JTextField jtfScheduleOut;
     private javax.swing.JTextField jtfSearchEmployee;
+    private javax.swing.JTextField jtfSearching;
     private javax.swing.JTextField jtfTimestamp;
     // End of variables declaration//GEN-END:variables
 }

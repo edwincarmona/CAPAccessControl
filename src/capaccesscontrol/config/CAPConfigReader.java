@@ -17,6 +17,12 @@ import java.util.logging.Logger;
  * @author Edwin Carmona
  */
 public class CAPConfigReader {
+    
+    /**
+     * Leer configuración.
+     * 
+     * @return 
+     */
     public CAPConfig readConfig() {
         ObjectMapper mapper = new ObjectMapper();
         try {

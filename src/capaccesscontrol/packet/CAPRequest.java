@@ -32,7 +32,14 @@ public class CAPRequest {
     private final String usrCAP;
     private final String pswdCAP;
     private final String urlLoginCAP;
-
+    
+    /**
+     * Clase para realizar peticiones, recibe usuario, password y ruta para login.
+     * 
+     * @param usrCAP
+     * @param pswdCAP
+     * @param urlLoginCAP 
+     */
     public CAPRequest(String usrCAP, String pswdCAP, String urlLoginCAP) {
         this.usrCAP = usrCAP;
         this.pswdCAP = pswdCAP;
@@ -40,6 +47,13 @@ public class CAPRequest {
         this._TOKEN = "";
     }
     
+    /**
+     * Petición de empleados.
+     * Recibe un objeto response con la lista de empleados activos y no borrados de CAP.
+     * 
+     * @param url
+     * @return 
+     */
     public CAPResponse requestEmployees(String url) {
         CAPResponse response;
         
@@ -48,6 +62,15 @@ public class CAPRequest {
         return response;
     }
     
+    /**
+     * Solicitar información a CAP por id de empleado.
+     * 
+     * @param dtDate
+     * @param idEmployee
+     * @param nextDays
+     * @param url
+     * @return 
+     */
     public CAPResponse requestByIdEmployee(Date dtDate, int idEmployee, int nextDays, String url) {
         CAPResponse response = null;
         try {
@@ -75,6 +98,15 @@ public class CAPRequest {
         return response;
     }
     
+    /**
+     * Solicitar información a CAP por número de empleado.
+     * 
+     * @param dtDate
+     * @param numEmployee
+     * @param nextDays
+     * @param url
+     * @return 
+     */
     public CAPResponse requestByNumEmployee(Date dtDate, String numEmployee, int nextDays, String url) {
         CAPResponse response = null;
         try {
@@ -102,6 +134,13 @@ public class CAPRequest {
         return response;
     }
     
+    /**
+     * Realizar petición.
+     * 
+     * @param sURL
+     * @param query
+     * @return 
+     */
     private CAPResponse request(String sURL, String query) {
         try {
             String charset = java.nio.charset.StandardCharsets.UTF_8.name();
@@ -149,7 +188,10 @@ public class CAPRequest {
         
         return null;
      }
-        
+    
+    /**
+     * Solicitar y realizar login
+     */
     private void login() {
         try {
             URLConnection connection = new URL(this.urlLoginCAP).openConnection();
